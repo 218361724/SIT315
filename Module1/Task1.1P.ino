@@ -3,22 +3,27 @@
   
   Simple Sense-Think-Act Board
 
-  Tuns an LED on/off based on a temperature threshold.
+  Toggles an LED when motion is detected.
 */
 
-#define LED_PIN 13
-#define TMP_SENSOR_PIN A5
-#define TMP_SENSOR_VIN 5.0
-#define TMP_THRESHOLD = 22
+#define PIR_PIN 2
+#define LED_PIN 3
 
 // Environment state
-bool isLedOn = false;
+bool isMotionDetected = false;
 
 void setup()
 {
   // Configure pins
-  pinMode(TMP_SENSOR_PIN, INPUT);
+  pinMode(PIR_PIN, INPUT);
   pinMode(LED_PIN, OUTPUT);
+  
+  // Handle motion detected/stopped
+  attachInterrupt(
+    digitalPinToInterrupt(PIR_PIN),
+    updateEnv,
+    CHANGE
+  );
 
   // Open serial communication
   Serial.begin(9600);
@@ -26,27 +31,19 @@ void setup()
 
 void loop()
 {
-  // Sense: read current temperature
-  float tempSensorReading = analogRead(TMP_SENSOR_PIN);
-  float tempSensorVOut = (tempSensorReading * TMP_SENSOR_VIN) / 1024.0;
-  float currentTemp = (tempSensorVOut - 0.5) * 100;
-  Serial.print("Sensor input (raw): ");
-  Serial.println(tempSensorReading);
-  Serial.print("Sensor input (temp c): ");
-  Serial.println(currentTemp);
+  // Do nothing
+}
+
+void updateEnv() {
+  // Update motion detection state
+  isMotionDetected = digitalRead(PIR_PIN) == HIGH;
   
-  // Think: assess whether temp threshold is being exceeded
-  bool prevIsLedOn = isLedOn;
-  isLedOn = currentTemp > 22;
+  // Log current button state, and previous LED state
+  Serial.print("Sensor input: motion ");
+  Serial.println(isMotionDetected ? "detected" : "stopped");
+
+  // Assign new LED state
+  digitalWrite(LED_PIN, isMotionDetected ? HIGH : LOW);
   Serial.print("Actuator output: LED ");
-  Serial.println(isLedOn ? "On" : "Off");
-
-  // Act: set new LED state when changed
-  if(prevIsLedOn != isLedOn)
-  {
-    digitalWrite(LED_PIN, isLedOn ? HIGH : LOW);
-  }
-
-  // Set polling interval to 500ms
-  delay(500);
+  Serial.println(isMotionDetected ? "on" : "off");
 }
